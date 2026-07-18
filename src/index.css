@@ -1,0 +1,91 @@
+:root {
+  --bg: #0b0d0f;
+  --surface: #111418;
+  --surface-raised: #171b20;
+  --surface-soft: #1d2228;
+  --glass: rgba(18, 22, 26, 0.68);
+  --glass-deep: rgba(10, 14, 18, 0.78);
+  --glass-edge: rgba(255, 255, 255, 0.11);
+  --glass-edge-soft: rgba(255, 255, 255, 0.065);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --heading: #f4f1e9;
+  --text: #c6c4bd;
+  --muted: #858a8f;
+  --accent: #d7a94a;
+  --accent-strong: #edbd5c;
+  --accent-ink: #19150e;
+  --success: #74a88c;
+  font-family: 'Geist Variable', 'Avenir Next', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 450;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--bg);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100svh;
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    linear-gradient(128deg, rgba(196, 143, 49, 0.16), transparent 31%),
+    linear-gradient(304deg, rgba(65, 116, 99, 0.14), transparent 29%),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    #0b0d0f;
+  background-size:
+    100% 100%,
+    100% 100%,
+    48px 48px,
+    48px 48px,
+    auto;
+  background-attachment: fixed;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.75'/%3E%3C/svg%3E");
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button {
+  letter-spacing: 0;
+}
+
+::selection {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
