@@ -300,19 +300,197 @@ const palettes = {
   },
 }
 
-export const paletteOptions = Object.entries(palettes).map(([id, value]) => ({
-  id,
-  label: value.label,
-  description: value.description,
-})).sort((a, b) => Number(b.id === 'mixed') - Number(a.id === 'mixed'))
+export const BLOCK_FILTERS = [
+  {
+    id: 'functional',
+    label: 'Functional',
+    description: 'Workstations, containers, redstone parts, TNT, bee nests',
+  },
+  {
+    id: 'gravity',
+    label: 'Unstable',
+    description: 'Sand, gravel, concrete powder, and coral that falls or dies',
+  },
+  {
+    id: 'transparent',
+    label: 'See-through',
+    description: 'Glass, leaves, ice, grates, slime, and honey',
+  },
+  {
+    id: 'rare',
+    label: 'Rare & ores',
+    description: 'Silk-touch ores plus diamond, emerald, gold, and netherite',
+  },
+]
 
-export function getPalette(id) {
-  return palettes[id] ?? palettes.fidelity
+export const DEFAULT_FILTERS = ['functional', 'gravity', 'transparent', 'rare']
+
+const FUNCTIONAL_BLOCKS = new Set([
+  'barrel',
+  'bee_nest',
+  'beehive',
+  'blast_furnace',
+  'cartography_table',
+  'chiseled_bookshelf',
+  'crafter',
+  'crafting_table',
+  'creaking_heart',
+  'dispenser',
+  'dropper',
+  'fletching_table',
+  'furnace',
+  'jukebox',
+  'lodestone',
+  'loom',
+  'note_block',
+  'observer',
+  'piston',
+  'redstone_lamp',
+  'respawn_anchor',
+  'sculk_catalyst',
+  'smithing_table',
+  'smoker',
+  'sticky_piston',
+  'target',
+  'tnt',
+])
+
+const RARE_BLOCKS = new Set([
+  'ancient_debris',
+  'beacon',
+  'crying_obsidian',
+  'diamond_block',
+  'emerald_block',
+  'gilded_blackstone',
+  'gold_block',
+  'lapis_block',
+  'netherite_block',
+  'raw_gold_block',
+])
+
+export function blockCategories(block) {
+  const key = block.key ?? block.state.replace(/^minecraft:/, '').replace(/\[.*$/, '')
+  const categories = new Set()
+  if (FUNCTIONAL_BLOCKS.has(key) || /copper_bulb$/.test(key)) categories.add('functional')
+  if (block.unstable) categories.add('gravity')
+  if (block.faceAlpha && Math.min(...Object.values(block.faceAlpha)) < 0.98) {
+    categories.add('transparent')
+  }
+  if (RARE_BLOCKS.has(key) || /_ore$/.test(key)) categories.add('rare')
+  return categories
+}
+
+const mixedByKey = new Map(SURVIVAL_MIXED_BLOCKS.map((block) => [block.key, block]))
+
+function pickBlocks(keys) {
+  return keys
+    .map((key) => mixedByKey.get(key))
+    .filter(Boolean)
+    .map((block) => ({
+      key: block.key,
+      label: block.label,
+      state: block.state,
+      rgb: block.rgb,
+      legacyId: block.legacyId,
+      legacyData: block.legacyData,
+    }))
+}
+
+export const FILLER_BLOCKS = pickBlocks([
+  'stone',
+  'cobblestone',
+  'cobbled_deepslate',
+  'andesite',
+  'tuff',
+  'dirt',
+  'netherrack',
+])
+
+export const PEDESTAL_BLOCKS = pickBlocks([
+  'polished_andesite',
+  'stone_bricks',
+  'smooth_stone',
+  'polished_deepslate',
+  'deepslate_tiles',
+  'polished_blackstone_bricks',
+  'mossy_stone_bricks',
+  'quartz_block',
+])
+
+export const paletteOptions = Object.entries(palettes)
+  .map(([id, value]) => ({
+    id,
+    label: value.label,
+    description: value.description,
+    count: value.blocks.length,
+    swatches: paletteSwatches(value.blocks, 18),
+    supportsFilters: Boolean(value.textureAware),
+  }))
+  .sort((a, b) => Number(b.id === 'mixed') - Number(a.id === 'mixed'))
+
+const resolvedPalettes = new Map()
+
+// Returns a palette with survival filters and per-block bans applied. The
+// result is cached so block matching can memoize against a stable object.
+export function getPalette(id, { filters = [], excluded = [] } = {}) {
+  const source = palettes[id] ?? palettes.fidelity
+  const activeFilters = source.textureAware ? [...filters].sort() : []
+  const bans = [...excluded].sort()
+  const cacheKey = `${id}|${activeFilters.join(',')}|${bans.join(',')}`
+  const cached = resolvedPalettes.get(cacheKey)
+  if (cached) return cached
+
+  const banned = new Set(bans)
+  const filterSet = new Set(activeFilters)
+  let filteredOut = 0
+  let blocks = source.blocks.filter((block) => {
+    if (filterSet.size) {
+      for (const category of blockCategories(block)) {
+        if (filterSet.has(category)) {
+          filteredOut += 1
+          return false
+        }
+      }
+    }
+    return !banned.has(block.state)
+  })
+
+  let fallback = false
+  if (blocks.length === 0) {
+    blocks = source.blocks
+    fallback = true
+  }
+
+  const palette = {
+    id,
+    label: source.label,
+    description: source.description,
+    textureAware: source.textureAware,
+    blocks,
+    totalCount: source.blocks.length,
+    filteredOut,
+    bannedCount: fallback ? 0 : source.blocks.length - filteredOut - blocks.length,
+    fallback,
+  }
+
+  if (resolvedPalettes.size > 48) resolvedPalettes.clear()
+  resolvedPalettes.set(cacheKey, palette)
+  return palette
 }
 
 const blockLabCache = new WeakMap()
+const matchCache = new WeakMap()
 
 export function matchBlock(color, palette, face = 'north') {
+  let cache = matchCache.get(palette)
+  if (!cache) {
+    cache = new Map()
+    matchCache.set(palette, cache)
+  }
+  const cacheKey = `${color.r},${color.g},${color.b},${face}`
+  const cached = cache.get(cacheKey)
+  if (cached) return cached
+
   let bestBlock = palette.blocks[0]
   let bestRgb = bestBlock.faceRgb?.[face] ?? bestBlock.rgb
   let bestError = Number.POSITIVE_INFINITY
@@ -340,12 +518,14 @@ export function matchBlock(color, palette, face = 'north') {
     }
   }
 
-  return {
+  const result = {
     block: bestBlock,
     rgb: bestRgb,
     error: bestError,
     score: bestScore,
   }
+  cache.set(cacheKey, result)
+  return result
 }
 
 export function nearestBlock(color, palette, face = 'north') {
@@ -360,4 +540,23 @@ function getBlockLab(block, face, rgb) {
   }
   if (!cached[face]) cached[face] = rgbToOklab(rgb)
   return cached[face]
+}
+
+function paletteSwatches(blocks, count) {
+  const entries = blocks.map((block) => {
+    const [L, a, b] = rgbToOklab(block.rgb)
+    const chroma = Math.hypot(a, b)
+    return { rgb: block.rgb, L, chroma, hue: Math.atan2(b, a) }
+  })
+  const chromatic = entries
+    .filter((entry) => entry.chroma > 0.045)
+    .sort((a, b) => a.hue - b.hue)
+  const neutral = entries
+    .filter((entry) => entry.chroma <= 0.045)
+    .sort((a, b) => b.L - a.L)
+  const ordered = [...neutral.slice(0, Math.ceil(neutral.length / 2)), ...chromatic, ...neutral.slice(Math.ceil(neutral.length / 2))]
+  if (ordered.length <= count) return ordered.map((entry) => entry.rgb)
+  return Array.from({ length: count }, (_, index) =>
+    ordered[Math.floor((index * ordered.length) / count)].rgb,
+  )
 }
