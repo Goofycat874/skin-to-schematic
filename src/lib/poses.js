@@ -21,9 +21,12 @@ export const JOINT_AXES = {
 }
 
 export const AXIS_LABELS = {
-  pitch: 'Swing',
-  roll: 'Raise',
-  yaw: 'Turn',
+  head: { pitch: 'Look up', yaw: 'Turn', roll: 'Tilt' },
+  limb: { pitch: 'Swing', roll: 'Raise', yaw: 'Twist' },
+}
+
+export function axisLabel(joint, axis) {
+  return (joint === 'head' ? AXIS_LABELS.head : AXIS_LABELS.limb)[axis]
 }
 
 export const POSES = [

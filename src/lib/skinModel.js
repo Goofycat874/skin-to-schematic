@@ -353,16 +353,19 @@ export function buildSkinModel(skin, inputOptions = {}) {
     }
   }
 
+  // Internal space is the vanilla model space with y flipped, which mirrors
+  // the character. Flipping x on output turns that into a true rotation so
+  // the statue's right arm ends up on the east side when it faces north.
   for (let y = minY; y <= maxY; y += 1) {
     for (let z = minZ; z <= maxZ; z += 1) {
-      for (let x = minX; x <= maxX; x += 1) {
+      for (let x = maxX; x >= minX; x -= 1) {
         const index = (y * L + z) * W + x
         const recordId = cells[index]
         if (recordId < 0) continue
         const interior = depth[index] > thickness
         if (interior && !filled) continue
         const record = context.records[recordId]
-        const bx = x - minX + pedestalMargin
+        const bx = maxX - x + pedestalMargin
         const by = y - minY + pedestalHeight
         const bz = z - minZ + pedestalMargin
 
@@ -656,8 +659,10 @@ function projectToFace(face, i, j, k, w, h, d) {
   }
 }
 
+// [negative, positive] normal direction per axis. The x pair is swapped
+// because output x is mirrored (see buildSkinModel).
 const BLOCK_FACE_BY_AXIS = [
-  ['west', 'east'],
+  ['east', 'west'],
   ['down', 'up'],
   ['north', 'south'],
 ]

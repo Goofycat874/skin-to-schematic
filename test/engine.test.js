@@ -44,9 +44,10 @@ test('thicker shells keep side colors on the sides instead of smearing the front
   )
   assert.ok(rightSide.length > 0)
   for (const block of rightSide) assert.deepEqual(block.sourceColor, [30, 30, 220, 255])
-  const minHeadX = Math.min(...model.blocks.filter((b) => b.part === 'head').map((b) => b.x))
+  // The character's right side faces east (+x) when the statue faces north.
+  const rightHeadX = Math.max(...model.blocks.filter((b) => b.part === 'head').map((b) => b.x))
   const sideColumn = model.blocks.filter(
-    (b) => b.part === 'head' && b.x === minHeadX && b.z > 0 && b.z < 7,
+    (b) => b.part === 'head' && b.x === rightHeadX && b.z > 0 && b.z < 7,
   )
   assert.ok(sideColumn.every((block) => block.face === 'right'))
 })
@@ -99,6 +100,28 @@ test('poses move limbs: zombie arms reach forward', () => {
     customPose: { rightArm: { pitch: 90 } },
   })
   assert.ok(custom.length > standing.length)
+})
+
+test('statues are not mirrored: the face reads left-to-right from the front', () => {
+  const skin = blankSkin()
+  setPixel(skin.imageData, 8, 8, [255, 0, 0, 255]) // face, left edge of the texture
+  setPixel(skin.imageData, 15, 8, [0, 0, 255, 255]) // face, right edge of the texture
+  const model = buildSkinModel(skin, OPTIONS)
+  const red = model.blocks.find((block) => block.sourceColor[0] === 255)
+  const blue = model.blocks.find((block) => block.sourceColor[2] === 255)
+  // A viewer north of the statue looks south, so east (+x) is on their left,
+  // exactly where the left edge of the face texture belongs.
+  assert.ok(red.x > blue.x)
+  assert.equal(red.blockFace, 'north')
+})
+
+test('side faces report their real compass direction', () => {
+  const skin = blankSkin()
+  setPixel(skin.imageData, 3, 10, [255, 0, 0, 255]) // head right side
+  setPixel(skin.imageData, 19, 10, [0, 0, 255, 255]) // head left side
+  const model = buildSkinModel(skin, OPTIONS)
+  assert.equal(model.blocks.find((b) => b.face === 'right').blockFace, 'east')
+  assert.equal(model.blocks.find((b) => b.face === 'left').blockFace, 'west')
 })
 
 test('rotated limbs face their texture toward the new direction', () => {
