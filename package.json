@@ -7,12 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "generate:palette": "node scripts/generateSurvivalMixedPalette.mjs",
+    "generate:samples": "node scripts/generateSampleSkins.mjs",
     "test": "node --test",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
+    "@fontsource-variable/geist-mono": "^5.3.0",
     "lucide-react": "^1.17.0",
     "pako": "^2.1.0",
     "react": "^19.2.6",
